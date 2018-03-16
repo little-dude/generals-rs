@@ -1,0 +1,61 @@
+table {
+   border-collapse: collapse;
+   text-color: white;
+}
+
+td {
+   color: white;
+   text-align: center;
+   border: 1px solid grey;
+   height: 32px;
+   width: 32px;
+   max-width: 32px;
+   max-height: 32px;
+   min-width: 32px;
+   min-height: 32px;
+   padding: 0px;
+   font-size: 10px;
+}
+
+td[data-type="mountain"] {
+   background: url("./assets/obstacle.png");
+   background-repeat: no-repeat;
+   background-position: 50% 50%;
+   background-size: 25px 25px;
+}
+
+td[data-type="general"] {
+   background: url("./assets/crown.png");
+   background-repeat: no-repeat;
+   background-position: 50% 50%;
+   background-size: 25px 25px;
+}
+
+td[data-owner="0"] {
+   background-color: blue;
+}
+td[data-owner="1"] {
+   background-color: red;
+}
+td[data-owner="2"] {
+   background-color: green;
+}
+td[data-owner="4"] {
+   background-color: purple;
+}
+td[data-owner="5"] {
+   background-color: yellow;
+}
+
+.selected {
+    border: 1px solid white;
+    opacity: 0.9;
+}
+
+.hidden {
+    opacity: 0.4;
+}
+
+.attackable {
+    opacity: 0.4;
+}

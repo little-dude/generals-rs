@@ -1,0 +1,20 @@
+{
+    "extends": [
+        "eslint:recommended",
+        "prettier"
+    ],
+    "parserOptions": {
+        "sourceType": "module"
+    },
+    "plugins": [
+        "prettier"
+    ],
+    "rules": {
+        "no-console": 0,
+        "prettier/prettier": "error",
+    },
+    "env": {
+        "browser": true,
+        "es6": true
+    },
+}
