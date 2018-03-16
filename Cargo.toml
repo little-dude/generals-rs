@@ -1,0 +1,11 @@
+[package]
+name = "generals-rs"
+version = "0.1.0"
+authors = ["Corentin Henry <corentinhenry@gmail.com>"]
+
+[dependencies]
+termion = "*"
+failure = "*"
+rand = "*"
+rmp-rpc = "0.2"
+fera-unionfind = "0.1"
