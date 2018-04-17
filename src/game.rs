@@ -143,7 +143,7 @@ impl<'a> From<&'a mut PendingGame> for ActiveGame {
         ActiveGame {
             connections,
             game,
-            ticks: Interval::new(Instant::now(), Duration::from_secs(1)),
+            ticks: Interval::new(Instant::now(), Duration::from_secs(2)),
         }
     }
 }

@@ -1,0 +1,30 @@
+table {
+   border-collapse: collapse;
+}
+
+td {
+   border: 1px solid grey;
+   height: 32px;
+   width: 32px;
+   max-width: 32px;
+   max-height: 32px;
+   min-width: 32px;
+   min-height: 32px;
+   padding: 0px;
+   font-size: 12px;
+}
+
+td[data-type="wall"] {
+   background: url("./assets/obstacle.png");
+   background-repeat: no-repeat;
+   background-position: 50% 50%;
+   background-size: 25px 25px;
+   background-color: red;
+}
+
+td[data-type="general"] {
+   background: url("./assets/crown.png");
+   background-repeat: no-repeat;
+   background-position: 50% 50%;
+   background-size: 32px 32px;
+}

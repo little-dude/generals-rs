@@ -91,6 +91,7 @@ pub enum MoveOutcome {
 
 /// Represent the different types of open (ie non-wall) tiles
 #[derive(Copy, Clone, PartialEq, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum TileKind {
     /// A tile that contains a general
     General,
@@ -339,6 +340,11 @@ impl Tile {
             self.0.as_mut().unwrap().kind = TileKind::Fortress;
         }
         self.0.as_mut().unwrap().dirty = true;
+    }
+
+    /// Turn the tile into a wall.
+    pub fn make_wall(&mut self) {
+        self.0 = None;
     }
 
     /// Set the number of units occupying the tile

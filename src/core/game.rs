@@ -175,9 +175,14 @@ impl Update {
                     let mut t = t.clone();
                     if !t.is_visible_by(player) {
                         // Make sure we don't reveal generals or cities during the first update
+
                         t.set_units(0);
                         if t.is_general() {
                             t.make_open();
+                        }
+
+                        if t.is_fortress() {
+                            t.make_wall();
                         }
                     }
                     (*i, t)

@@ -1,0 +1,31 @@
+{
+  "name": "general-rs",
+  "version": "0.0.1",
+  "description": "frontend for general-rs, a clone of generals.io",
+  "main": "index.js",
+  "author": "little-dude",
+  "license": "MIT",
+  "scripts": {
+    "build": "browserify js/index.js -o bundle.js -t babelify --presets \"@babel/preset-env\""
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-es2016": "^6.24.1",
+    "babelify": "^8.0.0",
+    "browser": "^0.2.6",
+    "browserify": "^16.2.0",
+    "docdash": "^0.4.0",
+    "eslint": "^4.19.1",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-config-standard": "^11.0.0",
+    "eslint-plugin-import": "^2.11.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-prettier": "^2.6.0",
+    "eslint-plugin-promise": "^3.7.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "jsdoc": "^3.5.5",
+    "prettier": "^1.12.1"
+  }
+}
