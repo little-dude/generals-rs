@@ -49,7 +49,7 @@ impl<T> Grid<T> {
     }
 
     pub fn is_valid_index(&self, i: usize) -> bool {
-        i >= 0 && i < self.width * self.height
+        i < self.width * self.height
     }
 
     fn coordinates(&self, i: usize) -> (usize, usize) {
