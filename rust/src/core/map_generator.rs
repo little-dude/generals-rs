@@ -4,18 +4,20 @@
 //! with a minimum manhattan distance between each other.
 //!
 //! Finally, the topologies are random, but there is a least one open path between the generals.
+use std::cell::RefCell;
+
 use fera_unionfind::UnionFindRange;
 use rand::seq::sample_indices;
 use rand::{thread_rng, ThreadRng};
 
 use super::common::Tile;
 use super::grid::Grid;
-use std::cell::RefCell;
 
 const MIN_DISTANCE: usize = 10;
 const MIN_GRID_SIZE: usize = 17;
 const GRID_SIZE_MAX_DELTA: usize = 6;
 
+/// A temporary datastructure used to generate a random grid.
 #[derive(Debug)]
 pub struct GridBuilder {
     grid: Grid<RefCell<Tile>>,
@@ -25,6 +27,8 @@ pub struct GridBuilder {
 }
 
 impl GridBuilder {
+    /// Return a new builder. The grid dimensions are random but are related to the number of
+    /// generals: more generals mean bigger grid.
     pub fn new(nb_generals: usize) -> Self {
         let mut rng = thread_rng();
         let dimensions = sample_indices(&mut rng, GRID_SIZE_MAX_DELTA + 1, 2);
@@ -39,6 +43,7 @@ impl GridBuilder {
         }
     }
 
+    /// Return whether a given cell on the grid is open (ie is not a wall or a fortress).
     fn is_open(&self, index: usize) -> bool {
         let tile = self.grid.get(index).borrow();
         tile.is_open() || tile.is_general()

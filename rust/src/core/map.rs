@@ -1,8 +1,12 @@
+use std::cell::{Ref, RefCell, RefMut};
+
 use super::common::{Direction, InvalidMove, Move, MoveOutcome, PlayerId, Tile};
 use super::grid::Grid;
 use super::map_generator::GridBuilder;
-use std::cell::{Ref, RefCell, RefMut};
 
+/// A grid representing the game map. It provides interior mutability for the tiles, which means
+/// multiple tiles can be borrowed mutable at the same time, without having to borrow mutably the
+/// map itself.
 #[derive(Debug)]
 pub struct Map(Grid<RefCell<Tile>>);
 
@@ -13,21 +17,36 @@ impl Map {
         Map(grid_builder.build())
     }
 
+    /// The number of tiles on the map
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// The number of tiles in a row
+    pub fn width(&self) -> usize {
+        self.0.width()
+    }
+
+    /// The number of tiles in a column
+    pub fn height(&self) -> usize {
+        self.0.height()
+    }
+
+    /// Return whether the map is empty, ie is made of 0 tile.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    #[cfg(test)]
+    pub fn from_grid(inner: Grid<RefCell<Tile>>) -> Self {
+        Map(inner)
     }
 
     /// Update the tiles involved in a move.
     ///
     /// - make sure the move is valid
-    ///
     /// - perform the move, updating the number of units of both the source and destination tile,
     ///   as well as the owner of the destination tile, if it changes as a consequence of the move
-    ///
     /// - update the visibility of the tiles surrounding the destination tile
     ///
     /// If a general is captured, this method also gives all the tiles that belonged to the
@@ -79,12 +98,21 @@ impl Map {
         Ok(())
     }
 
-    // All hail to impl Trait !
+    /// Return an iterator over all the tiles, except the walls. The tiles are immutables.
     pub fn iter(&self) -> impl Iterator<Item = Ref<Tile>> {
         self.0.iter().map(|t| t.borrow()).filter(|t| !t.is_wall())
     }
 
-    // All hail to impl Trait !
+    /// Return an iterator over all the tiles, except the walls. The tiles are mutable.
+    fn iter_mut(&mut self) -> impl Iterator<Item = RefMut<Tile>> {
+        self.0
+            .iter()
+            .map(|t| t.borrow_mut())
+            .filter(|t| !t.is_wall())
+    }
+
+    /// Return an iterator over all the tiles (except the walls) with their indices. The tiles are
+    /// immutable.
     pub fn enumerate(&self) -> impl Iterator<Item = (usize, Ref<Tile>)> {
         self.0
             .iter()
@@ -93,6 +121,8 @@ impl Map {
             .filter(|(_, t)| !t.is_wall())
     }
 
+    /// Return an iterator over all the tiles (except the walls) with their indices. The tiles are
+    /// mutable.
     pub fn enumerate_mut(&self) -> impl Iterator<Item = (usize, RefMut<Tile>)> {
         self.0
             .iter()
@@ -101,16 +131,15 @@ impl Map {
             .filter(|(_, t)| !t.is_wall())
     }
 
-    // All hail to impl Trait !
-    fn iter_mut(&mut self) -> impl Iterator<Item = RefMut<Tile>> {
-        self.0
-            .iter()
-            .map(|t| t.borrow_mut())
-            .filter(|t| !t.is_wall())
-    }
-
+    /// Return a mutable reference to the tile at the given index.
     fn get_mut(&self, index: usize) -> RefMut<Tile> {
         self.0.get(index).borrow_mut()
+    }
+
+    #[cfg(test)]
+    /// Return a reference to the tile at the given index.
+    pub(crate) fn get(&self, index: usize) -> Ref<Tile> {
+        self.0.get(index).borrow()
     }
 
     /// Make sure the given player can see all the tiles surrounding the given index. This should be
@@ -154,11 +183,14 @@ impl Map {
         false
     }
 
+    /// Increment the number of units of the tiles that are owned by players. If the
+    /// `reinforce_all_tiles` is `false`, then only the generals and fortresses are reinforced,
+    /// otherwise, all the tiles are reinforced.
     pub fn reinforce(&mut self, reinforce_all_tiles: bool) {
         for mut tile in self.iter_mut() {
             if
             // reinforce open tiles only when there's a global reinforcement round
-            (tile.is_open() && reinforce_all_tiles)
+            (tile.owner().is_some() && reinforce_all_tiles)
                     // reinfoce generals every round
                     || tile.is_general()
                     // reinfoce fortress every round if they are occupied
