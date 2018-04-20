@@ -372,6 +372,9 @@ impl Tile {
     pub fn set_owner(&mut self, player: Option<PlayerId>) {
         if let Some(ref mut tile) = self.0 {
             tile.owner = player;
+            if let Some(player) = player {
+                tile.reveal_to(player);
+            }
             tile.dirty = true;
         }
     }

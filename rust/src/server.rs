@@ -77,7 +77,9 @@ impl Future for Server {
                     }
                     info!("pending game is ready, starting the game");
                     let mut ready = mem::replace(pending_game, PendingGame::new());
-                    let new_game = ActiveGame::from(&mut ready);
+                    let mut new_game = ActiveGame::from(&mut ready);
+                    // FIXME: I'm not 100% we can do that here, before spawning thegame
+                    new_game.start_send_updates();
                     handle.spawn(new_game.map_err(|e| error!("{}", e)));
                 }
                 Async::Ready(None) => return Err("Connection proxy sender dropped".into()),

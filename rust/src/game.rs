@@ -34,7 +34,7 @@ impl ActiveGame {
         }
     }
 
-    fn start_send_updates(&mut self) {
+    pub fn start_send_updates(&mut self) {
         debug!("sending updates to connection proxies");
 
         let ActiveGame {
@@ -44,6 +44,7 @@ impl ActiveGame {
         } = *self;
 
         let update = game.get_update();
+
         for (player, mut connection) in connections.iter_mut().filter(|(_, c)| !c.has_resigned()) {
             match connection.updates.start_send(update.filtered(*player)) {
                 Ok(AsyncSink::Ready) => continue,
@@ -101,7 +102,7 @@ impl Future for ActiveGame {
                 Async::Ready(Some(_instant)) => {
                     debug!("tick: updating the game");
                     self.process_players_actions();
-                    self.game.reinforce();
+                    self.game.incr_turn();
                     self.start_send_updates();
                     // To prevent the updates from being buffered, we call poll_complete on each
                     // sender

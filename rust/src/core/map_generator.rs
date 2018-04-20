@@ -51,7 +51,7 @@ impl GridBuilder {
 
     /// Create a new grid with only closed tiles and the generals. Then, keep opening tiles until
     /// all the generals are connected. Finally, the grid.
-    pub fn build(mut self) -> Grid<RefCell<Tile>> {
+    pub fn build(mut self) -> (Vec<usize>, Grid<RefCell<Tile>>) {
         let nb_tiles = self.grid.len();
         let mut uf = UnionFindRange::with_keys_in_range(..nb_tiles);
 
@@ -87,7 +87,7 @@ impl GridBuilder {
                     continue 'outer;
                 }
             }
-            return self.grid;
+            return (self.generals, self.grid);
         }
         panic!("Failed to generate map");
     }

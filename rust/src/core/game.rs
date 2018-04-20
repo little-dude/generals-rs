@@ -14,15 +14,33 @@ impl Game {
     /// as the number of players increases. A game start at turn 0, with each player owning exactly
     /// one tile, their general.
     pub fn new(mut players: Vec<PlayerId>) -> Self {
+        info!("starting a new game for player {:?}", players);
+
+        let (generals, map) = Map::generate(players.len());
+        assert_eq!(generals.len(), players.len());
+
+        for (general, player) in generals.into_iter().zip(players.iter().cloned()) {
+            info!("spawning player {} on {}", general, player);
+            let mut tile = map.get_mut(general);
+            tile.set_owner(Some(player));
+            map.enlarge_horizon(player, general);
+        }
+
         let mut game = Game {
-            map: Map::generate(players.len()),
+            map,
             players: HashMap::with_capacity(players.len()),
             turn: 0,
         };
         for player in players.drain(..) {
             let _ = game.players.insert(player, Player::new(player));
         }
+        info!("game is ready to start");
         game
+    }
+
+    /// Return the current turn number
+    pub fn turn(&self) -> usize {
+        self.turn
     }
 
     /// Mark the given player as defeated. When a player is defeated he cannot perform any action
@@ -34,6 +52,7 @@ impl Game {
     /// - The player's general has been captured, in which case all his tiles have already been
     ///   transfered to the player that captured him
     pub fn resign(&mut self, id: PlayerId) {
+        info!("player {} is resigning", id);
         let player = self.players.get_mut(&id).expect("Unknown player");
         if player.defeated() {
             error!("Got resignation from player defeated at turn {}", self.turn);
@@ -47,14 +66,16 @@ impl Game {
     /// for example), it is simply ignored. Not error is returned. Tiles that are updated by the
     /// move are marked as dirty.
     pub fn perform_move(&mut self, mv: Move) {
+        info!("processing move {:?}", mv);
         if let Some(player) = self.players.get(&mv.player) {
             if !player.can_move() {
-                warn!("Ignoring move from player {}", mv.player);
+                warn!("player {} cannot move, ignoring the move", mv.player);
             }
-            // We don't care about the result of the move.
-            let _ = self.map.perform_move(mv);
+            if let Err(e) = self.map.perform_move(mv) {
+                warn!("failed to process move {:?}: {}", mv, e);
+            }
         } else {
-            warn!("Ignoring move from unkown player {}", mv.player);
+            warn!("unknown player {}, ignoring the move", mv.player);
         }
     }
 
@@ -63,31 +84,43 @@ impl Game {
     /// reinforced at every turn.
     pub fn reinforce(&mut self) {
         if self.turn % 25 == 0 {
+            info!("reinforcing all the tiles");
             self.map.reinforce(true);
         } else {
+            info!("reinforcing generals and fortresses");
             self.map.reinforce(false);
         }
+    }
+
+    /// Increment the number of turns and reinforce the tiles that needs to be reinforced.
+    pub fn incr_turn(&mut self) {
+        self.turn += 1;
+        info!("incrementing turn: {}", self.turn);
+        self.reinforce();
     }
 
     /// Get all the tiles that are marked as dirty, unmark them, and return them along with other
     /// of properties that reflect the changes that occured in the game since the last update.
     pub fn get_update(&mut self) -> Update {
+        info!("building an update of the game");
+        // Get all the dirty tiles
         let updated_tiles = {
             let Game {
                 ref mut players,
                 ref map,
                 ..
             } = self;
+
             let mut updated_tiles = Vec::with_capacity(map.len());
             for (i, mut tile) in map.enumerate_mut() {
                 if let Some(owner) = tile.owner() {
                     if let Some(player) = players.get_mut(&owner) {
                         player.owned_tiles += 1;
                     } else {
-                        panic!("Tile owned by an unknown player");
+                        panic!("Tile {:?} owned by an unknown player {}", tile, owner);
                     }
                 }
-                if tile.is_dirty() {
+                if self.is_first_turn() || tile.is_dirty() {
                     updated_tiles.push((i, tile.clone()));
                     tile.set_clean();
                 }
@@ -95,6 +128,7 @@ impl Game {
             updated_tiles
         };
 
+        // Compute how many units each player controls
         for mut player in self.players.values_mut() {
             player.owned_tiles = 0;
         }
@@ -104,113 +138,71 @@ impl Game {
             }
         }
 
-        self.turn += 1;
-
-        Patch {
+        Update {
             turn: self.turn,
             players: self.players.clone(),
-            updated_tiles,
-        }.into()
-    }
-
-    /// Return a full representation of the current game state.
-    pub fn get_snapshot(&self) -> Snapshot {
-        Snapshot {
-            turn: self.turn,
             width: self.map.width(),
             height: self.map.height(),
-            players: self.players.clone(),
-            tiles: self.map.iter().map(|t| t.clone()).collect(),
+            is_initial_update: self.is_first_turn(),
+            tiles: updated_tiles,
         }
+    }
+
+    fn is_first_turn(&self) -> bool {
+        self.turn() == 0
     }
 }
 
-/// Represent a set of changes in a game. It contains the tiles that have been modified as well as
-/// information about the players and the current turn number.
 #[derive(Serialize, Clone)]
-pub struct Patch {
-    turn: usize,
-    players: HashMap<PlayerId, Player>,
-    updated_tiles: Vec<(usize, Tile)>,
-}
-
-impl Patch {
-    pub fn filtered(&self, player: PlayerId) -> Patch {
-        Patch {
-            turn: self.turn,
-            players: self.players.clone(),
-            updated_tiles: self.updated_tiles
-                .iter()
-                .filter(|(_, t)| t.is_visible_by(player))
-                .map(|(i, t)| (*i, t.clone()))
-                .collect(),
-        }
-    }
-}
-
-/// A full representation of a game, that can be serialized.
-#[derive(Serialize, Clone)]
-pub struct Snapshot {
+pub struct Update {
     turn: usize,
     width: usize,
     height: usize,
     players: HashMap<PlayerId, Player>,
-    tiles: Vec<Tile>,
-}
-
-impl Snapshot {
-    pub fn filtered(&self, player: PlayerId) -> Snapshot {
-        let tiles = self.tiles
-            .iter()
-            .map(|t| {
-                let mut t = t.clone();
-                if !t.is_visible_by(player) {
-                    t.set_units(0);
-                    if t.is_general() {
-                        t.make_open();
-                    }
-                }
-                t
-            })
-            .collect();
-
-        Snapshot {
-            turn: self.turn,
-            width: self.width,
-            height: self.height,
-            players: self.players.clone(),
-            tiles,
-        }
-    }
-}
-
-/// Represent an update that can be sent to clients to inform them of the current game state.
-#[derive(Serialize, Clone)]
-#[serde(untagged)]
-pub enum Update {
-    /// A representation of a set of changes that occured in the game
-    Patch(Patch),
-    /// A full representation of the game
-    Snapshot(Snapshot),
-}
-
-impl From<Patch> for Update {
-    fn from(patch: Patch) -> Self {
-        Update::Patch(patch)
-    }
-}
-
-impl From<Snapshot> for Update {
-    fn from(snapshot: Snapshot) -> Self {
-        Update::Snapshot(snapshot)
-    }
+    tiles: Vec<(usize, Tile)>,
+    #[serde(skip)]
+    is_initial_update: bool,
 }
 
 impl Update {
     pub fn filtered(&self, player: PlayerId) -> Self {
-        match *self {
-            Update::Patch(ref patch) => patch.filtered(player).into(),
-            Update::Snapshot(ref snapshot) => snapshot.filtered(player).into(),
+        info!("filtering update for player {}", player);
+
+        let tiles = if self.is_initial_update {
+            self.tiles
+                .iter()
+                .map(|(i, t)| {
+                    let mut t = t.clone();
+                    if !t.is_visible_by(player) {
+                        // Make sure we don't reveal generals or cities during the first update
+                        t.set_units(0);
+                        if t.is_general() {
+                            t.make_open();
+                        }
+                    }
+                    (*i, t)
+                })
+                .collect()
+        } else {
+            self.tiles
+                .iter()
+                .filter_map(|(i, t)| {
+                    if t.is_visible_by(player) {
+                        Some((*i, t.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        };
+
+        Update {
+            turn: self.turn,
+            width: self.width,
+            height: self.height,
+            players: self.players.clone(),
+            is_initial_update: self.is_initial_update,
+            tiles,
         }
     }
 }

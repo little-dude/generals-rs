@@ -12,9 +12,10 @@ pub struct Map(Grid<RefCell<Tile>>);
 
 impl Map {
     /// Return a random new map with the specified number of generals.
-    pub fn generate(nb_generals: usize) -> Self {
+    pub fn generate(nb_generals: usize) -> (Vec<usize>, Self) {
         let grid_builder = GridBuilder::new(nb_generals);
-        Map(grid_builder.build())
+        let (generals, grid) = grid_builder.build();
+        (generals, Map(grid))
     }
 
     /// The number of tiles on the map
@@ -74,15 +75,17 @@ impl Map {
             // If a general was captured, give all the tiles owned by the defeated general to
             // the attacker, and make all the tiles visible by the defeated general visible by
             // the attacker.
-            MoveOutcome::GeneralCaptured(defeated_player) => for mut t in self.iter_mut() {
-                if t.owner() == Some(defeated_player) {
-                    t.set_owner(Some(mv.player));
+            MoveOutcome::GeneralCaptured(defeated_player) => {
+                for mut t in self.iter_mut().filter(|t| !t.is_wall()) {
+                    if t.owner() == Some(defeated_player) {
+                        t.set_owner(Some(mv.player));
+                    }
+                    if t.is_visible_by(defeated_player) {
+                        t.hide_from(defeated_player);
+                        t.reveal_to(mv.player);
+                    }
                 }
-                if t.is_visible_by(defeated_player) {
-                    t.hide_from(defeated_player);
-                    t.reveal_to(mv.player);
-                }
-            },
+            }
             // If a regular tile was captured, we just need to extend the player's horizon and
             // reveal a few new tiles.
             MoveOutcome::TileCaptured(defeated_player) => {
@@ -98,41 +101,28 @@ impl Map {
         Ok(())
     }
 
-    /// Return an iterator over all the tiles, except the walls. The tiles are immutables.
+    /// Return an iterator over all the tiles. The tiles are immutables.
     pub fn iter(&self) -> impl Iterator<Item = Ref<Tile>> {
-        self.0.iter().map(|t| t.borrow()).filter(|t| !t.is_wall())
+        self.0.iter().map(|t| t.borrow())
     }
 
-    /// Return an iterator over all the tiles, except the walls. The tiles are mutable.
+    /// Return an iterator over all the tiles. The tiles are mutable.
     fn iter_mut(&mut self) -> impl Iterator<Item = RefMut<Tile>> {
-        self.0
-            .iter()
-            .map(|t| t.borrow_mut())
-            .filter(|t| !t.is_wall())
+        self.0.iter().map(|t| t.borrow_mut())
     }
 
-    /// Return an iterator over all the tiles (except the walls) with their indices. The tiles are
-    /// immutable.
+    /// Return an iterator over all the tiles with their indices. The tiles are immutable.
     pub fn enumerate(&self) -> impl Iterator<Item = (usize, Ref<Tile>)> {
-        self.0
-            .iter()
-            .enumerate()
-            .map(|(i, t)| (i, t.borrow()))
-            .filter(|(_, t)| !t.is_wall())
+        self.0.iter().enumerate().map(|(i, t)| (i, t.borrow()))
     }
 
-    /// Return an iterator over all the tiles (except the walls) with their indices. The tiles are
-    /// mutable.
+    /// Return an iterator over all the tiles with their indices. The tiles are mutable.
     pub fn enumerate_mut(&self) -> impl Iterator<Item = (usize, RefMut<Tile>)> {
-        self.0
-            .iter()
-            .enumerate()
-            .map(|(i, t)| (i, t.borrow_mut()))
-            .filter(|(_, t)| !t.is_wall())
+        self.0.iter().enumerate().map(|(i, t)| (i, t.borrow_mut()))
     }
 
     /// Return a mutable reference to the tile at the given index.
-    fn get_mut(&self, index: usize) -> RefMut<Tile> {
+    pub fn get_mut(&self, index: usize) -> RefMut<Tile> {
         self.0.get(index).borrow_mut()
     }
 
@@ -144,7 +134,7 @@ impl Map {
 
     /// Make sure the given player can see all the tiles surrounding the given index. This should be
     /// called after the player just conquered the tile.
-    fn enlarge_horizon(&self, player: PlayerId, idx: usize) {
+    pub fn enlarge_horizon(&self, player: PlayerId, idx: usize) {
         for mut tile in self.0
             .extended_neighbors(idx)
             .map(|i| self.get_mut(i))
@@ -187,7 +177,7 @@ impl Map {
     /// `reinforce_all_tiles` is `false`, then only the generals and fortresses are reinforced,
     /// otherwise, all the tiles are reinforced.
     pub fn reinforce(&mut self, reinforce_all_tiles: bool) {
-        for mut tile in self.iter_mut() {
+        for mut tile in self.iter_mut().filter(|t| !t.is_wall()) {
             if
             // reinforce open tiles only when there's a global reinforcement round
             (tile.owner().is_some() && reinforce_all_tiles)
