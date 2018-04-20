@@ -36,14 +36,6 @@ impl<T> Grid<T> {
         &self.tiles()[index]
     }
 
-    pub fn tiles_mut(&mut self) -> &mut [T] {
-        self.tiles.as_mut()
-    }
-
-    pub fn get_mut(&mut self, index: usize) -> &mut T {
-        &mut self.tiles_mut()[index]
-    }
-
     fn index(&self, column: usize, line: usize) -> usize {
         column + line * self.width
     }
@@ -162,10 +154,6 @@ impl<T> Grid<T> {
 
     pub fn len(&self) -> usize {
         self.width * self.height
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     pub fn direct_neighbors(&self, index: usize) -> DirectNeighborsIter {

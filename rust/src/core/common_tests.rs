@@ -85,14 +85,6 @@ fn tile() {
     assert_eq!(tile.units(), 98);
     check_dirty_and_clean(&mut tile);
 
-    tile.incr_units(2);
-    assert_eq!(tile.units(), 100);
-    check_dirty_and_clean(&mut tile);
-
-    tile.decr_units(10);
-    assert_eq!(tile.units(), 90);
-    check_dirty_and_clean(&mut tile);
-
     tile.reveal_to(1);
     tile.reveal_to(2);
     tile.reveal_to(3);
@@ -129,7 +121,7 @@ fn tile_serialize() {
     let serialized = serde_json::to_string(&tile).unwrap();
     assert_eq!(serialized, r#"{"owner":1}"#);
 
-    tile.incr_units(42);
+    tile.set_units(42);
     let serialized = serde_json::to_string(&tile).unwrap();
     assert_eq!(serialized, r#"{"owner":1,"units":42}"#);
 

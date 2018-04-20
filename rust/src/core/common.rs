@@ -266,6 +266,7 @@ impl Tile {
         self.0.as_ref().and_then(|t| t.owner)
     }
 
+    #[cfg(test)]
     /// Return the number of units occupying the tile
     pub fn units(&self) -> u16 {
         self.0.as_ref().map(|t| t.units).unwrap_or(0)
@@ -352,18 +353,6 @@ impl Tile {
     pub fn incr_units(&mut self, units: u16) {
         if let Some(ref mut tile) = self.0 {
             tile.units += units;
-            tile.dirty = true;
-        }
-    }
-
-    /// Decrement the number of units occupying the tile
-    pub fn decr_units(&mut self, units: u16) {
-        if let Some(ref mut tile) = self.0 {
-            if units < tile.units {
-                tile.units -= units;
-            } else {
-                tile.units = 0;
-            }
             tile.dirty = true;
         }
     }

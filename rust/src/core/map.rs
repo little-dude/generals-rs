@@ -1,4 +1,6 @@
-use std::cell::{Ref, RefCell, RefMut};
+#[cfg(test)]
+use std::cell::Ref;
+use std::cell::{RefCell, RefMut};
 
 use super::common::{Direction, InvalidMove, Move, MoveOutcome, PlayerId, Tile};
 use super::grid::Grid;
@@ -31,11 +33,6 @@ impl Map {
     /// The number of tiles in a column
     pub fn height(&self) -> usize {
         self.0.height()
-    }
-
-    /// Return whether the map is empty, ie is made of 0 tile.
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 
     #[cfg(test)]
@@ -101,19 +98,9 @@ impl Map {
         Ok(())
     }
 
-    /// Return an iterator over all the tiles. The tiles are immutables.
-    pub fn iter(&self) -> impl Iterator<Item = Ref<Tile>> {
-        self.0.iter().map(|t| t.borrow())
-    }
-
     /// Return an iterator over all the tiles. The tiles are mutable.
     fn iter_mut(&mut self) -> impl Iterator<Item = RefMut<Tile>> {
         self.0.iter().map(|t| t.borrow_mut())
-    }
-
-    /// Return an iterator over all the tiles with their indices. The tiles are immutable.
-    pub fn enumerate(&self) -> impl Iterator<Item = (usize, Ref<Tile>)> {
-        self.0.iter().enumerate().map(|(i, t)| (i, t.borrow()))
     }
 
     /// Return an iterator over all the tiles with their indices. The tiles are mutable.

@@ -1,9 +1,6 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 
-use serde_json;
-
-use super::common::{Direction, Move, Player, Tile};
+use super::common::{Direction, Move, Tile};
 use super::grid::Grid;
 use super::map::Map;
 
