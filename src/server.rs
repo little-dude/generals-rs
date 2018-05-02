@@ -1,4 +1,4 @@
-use std::io::{self, ErrorKind};
+use std::io;
 use std::mem;
 use std::net::SocketAddr;
 
@@ -31,26 +31,43 @@ impl Server {
         handle.spawn(server.map_err(|e| error!("{}", e)));
 
         let socket = TcpListener::bind(&addr, &handle).unwrap();
-        println!("Listening on: {}", addr);
+        println!("listening on: {}", addr);
 
         let srv = socket.incoming().for_each(|(stream, addr)| {
             debug!("new tcp connection {}", addr);
             let connection_tx = connection_tx.clone();
             let handle = handle.clone();
-            accept_async(stream).and_then(move |ws| {
-                debug!("{}: websocket open", addr);
-                let (connection, connection_proxy) = Connection::new(ws);
-                handle.spawn(connection.map_err(|_| ()));
-                SendFuture::new(connection_tx).send(connection_proxy).or_else(|()| {
-                    error!("failed to send connection proxy to the server");
+
+            let addr_clone = addr.clone();
+            accept_async(stream)
+                .and_then(move |ws| {
+                    debug!("{}: websocket open", addr_clone);
+                    let (connection, connection_proxy) = Connection::new(ws);
+                    handle.spawn(connection.map_err(move |e| {
+                        error!(
+                            "{}: connection future terminated with an error: {:?}",
+                            addr_clone, e
+                        )
+                    }));
+                    SendFuture::new(connection_tx)
+                        .send(connection_proxy)
+                        .or_else(|()| {
+                            error!("failed to send connection proxy to the server");
+                            Ok(())
+                        })
+                })
+                .or_else(move |e| -> io::Result<()> {
+                    error!("{}: failed to initialize the connection: {:?}", addr, e);
                     Ok(())
                 })
-            })
-            // The future as type Result<_, tungstenite::Error>, but socket.incoming() returns a
-            // future of type Result<_, io::Error> so we have to convert back.
-            .map_err(|e| io::Error::new(ErrorKind::Other, format!("{}", e)))
         });
-        core.run(srv.map_err(|_| ())).unwrap();
+
+        core.run(srv.map_err(|e| error!("future returned an error: {:?}", e)))
+            .or_else(|e| -> io::Result<()> {
+                error!("the websocket server terminated with an error: {:?}", e);
+                Ok(())
+            })
+            .unwrap();
     }
 }
 
