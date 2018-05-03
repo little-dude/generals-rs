@@ -91,7 +91,7 @@ pub enum MoveOutcome {
     /// Outcome when a move resulted in a general being captured. The player ID is the ID of the
     /// defeated player.
     GeneralCaptured(PlayerId),
-    /// Outcome when a move resulted in an open tile or a fortress tile being captured. If the tile
+    /// Outcome when a move resulted in an open tile or a city tile being captured. If the tile
     /// was belonging to a different player than the one making the move, the player's ID is
     /// specified.
     TileCaptured(Option<PlayerId>),
@@ -99,21 +99,21 @@ pub enum MoveOutcome {
     StatuQuo,
 }
 
-/// Represent the different types of open (ie non-wall) tiles
+/// Represent the different types of open (ie non-mountain) tiles
 #[derive(Copy, Clone, PartialEq, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TileKind {
     /// A tile that contains a general
     General,
-    /// A tile that contains a fortress
-    Fortress,
+    /// A tile that contains a city
+    City,
     /// A regular tile
-    Normal,
-    /// A tile that contains a wall
-    Wall,
+    Open,
+    /// A tile that contains a mountain
+    Mountain,
 }
 
-/// Represent an open tile. Open tiles are tiles that are not walls, ie tiles that players can
+/// Represent an open tile. Open tiles are tiles that are not mountains, ie tiles that players can
 /// conquer.
 #[derive(Clone, PartialEq, Debug, Serialize)]
 pub struct Tile {
@@ -126,8 +126,8 @@ pub struct Tile {
     #[serde(skip_serializing_if = "has_no_unit")]
     units: u16,
 
-    /// The type of tile (normal, fortress or general)
-    #[serde(skip_serializing_if = "is_normal")]
+    /// The type of tile (open, city or general)
+    #[serde(skip_serializing_if = "is_open")]
     kind: TileKind,
 
     /// List of players that can see the tile. To be able to see an open tile, a player must own a
@@ -141,9 +141,9 @@ pub struct Tile {
 }
 
 /// Small helper used by serde to avoid serializing the `kind` field if the tile if of type
-/// `TileKind::Normal`. We try to keep the jsons as small as possible for network efficiency.
-fn is_normal(kind: &TileKind) -> bool {
-    *kind == TileKind::Normal
+/// `TileKind::Open`. We try to keep the jsons as small as possible for network efficiency.
+fn is_open(kind: &TileKind) -> bool {
+    *kind == TileKind::Open
 }
 
 /// Small helper used by serde to avoid serializing the `units` field if the tile does not have any
@@ -160,7 +160,7 @@ impl Tile {
             units: 0,
             dirty_for: HashSet::new(),
             visible_by: HashSet::new(),
-            kind: TileKind::Wall,
+            kind: TileKind::Mountain,
         }
     }
 
@@ -186,10 +186,10 @@ impl Tile {
 
     /// Perform a move from a source tile to a destination tile.
     pub fn attack(&mut self, dst: &mut Tile) -> Result<MoveOutcome, InvalidMove> {
-        if self.is_wall() {
+        if self.is_mountain() {
             return Err(InvalidMove::FromInvalidTile);
         }
-        if dst.is_wall() {
+        if dst.is_mountain() {
             return Err(InvalidMove::ToInvalidTile);
         }
         if self.units() < 2 {
@@ -211,8 +211,8 @@ impl Tile {
                     dst.owner = self.owner;
                     // We're capturing a general
                     if dst.kind == TileKind::General {
-                        //  Turn the general into a regular fortress
-                        dst.kind = TileKind::Fortress;
+                        //  Turn the general into a regular city
+                        dst.kind = TileKind::City;
                         MoveOutcome::GeneralCaptured(defender)
                     }
                     // We're capturing a regular tile
@@ -257,10 +257,10 @@ impl Tile {
         self.units
     }
 
-    /// Return whether the tile is open. A tile is open if it's not a fortress, a general or a
-    /// wall.
+    /// Return whether the tile is open. A tile is open if it's not a city, a general or a
+    /// mountain.
     pub fn is_open(&self) -> bool {
-        self.kind == TileKind::Normal
+        self.kind == TileKind::Open
     }
 
     /// Return whether the tile is a general.
@@ -268,19 +268,19 @@ impl Tile {
         self.kind == TileKind::General
     }
 
-    /// Return whether the tile is a fortress.
-    pub fn is_fortress(&self) -> bool {
-        self.kind == TileKind::Fortress
+    /// Return whether the tile is a city.
+    pub fn is_city(&self) -> bool {
+        self.kind == TileKind::City
     }
 
-    /// Return whether the tile is a wall
-    pub fn is_wall(&self) -> bool {
-        self.kind == TileKind::Wall
+    /// Return whether the tile is a mountain
+    pub fn is_mountain(&self) -> bool {
+        self.kind == TileKind::Mountain
     }
 
     /// Turn the tile into an open tile
     pub fn make_open(&mut self) {
-        self.kind = TileKind::Normal;
+        self.kind = TileKind::Open;
         self.set_dirty();
     }
 
@@ -295,22 +295,22 @@ impl Tile {
         self.set_dirty();
     }
 
-    // FIXME: unused for now, but that's because we don't have fortress yet
+    // FIXME: unused for now, but that's because we don't have city yet
     /// Turn the tile into a fortess.
-    pub fn make_fortress(&mut self) {
-        self.kind = TileKind::Fortress;
+    pub fn make_city(&mut self) {
+        self.kind = TileKind::City;
         self.set_dirty();
     }
 
-    /// Turn the tile into a wall.
-    pub fn make_wall(&mut self) {
-        self.kind = TileKind::Wall;
+    /// Turn the tile into a mountain.
+    pub fn make_mountain(&mut self) {
+        self.kind = TileKind::Mountain;
         self.set_dirty();
     }
 
     /// Set the number of units occupying the tile
     pub fn set_units(&mut self, units: u16) {
-        if self.is_wall() {
+        if self.is_mountain() {
             return;
         }
         self.units = units;
@@ -319,7 +319,7 @@ impl Tile {
 
     /// Increment the number of units occupying the tile
     pub fn incr_units(&mut self, units: u16) {
-        if self.is_wall() {
+        if self.is_mountain() {
             return;
         }
         self.units += units;
@@ -328,7 +328,7 @@ impl Tile {
 
     /// Set the owner of the tile. To remove the existing owner, set the owner to `None`.
     pub fn set_owner(&mut self, player: Option<PlayerId>) {
-        if self.is_wall() {
+        if self.is_mountain() {
             return;
         }
         // Mark the tile as dirty for the players that have visibility on the tile
@@ -369,11 +369,11 @@ pub enum InvalidMove {
     /// tile, the tile must have at least two units.
     NotEnoughUnits,
 
-    /// The destination tile is invalid (it can be a wall or an out-of-grid tile. This occurs for
-    /// instance if the source tile is on the top row, and the move is upward.
+    /// The destination tile is invalid (it can be a mountain or an out-of-grid tile. This occurs
+    /// for instance if the source tile is on the top row, and the move is upward.
     ToInvalidTile,
 
-    /// The source tile is either a wall or out of the grid.
+    /// The source tile is either a mountain or out of the grid.
     FromInvalidTile,
 
     /// The source tile does not belong to the player making the move. A move can only be performed
@@ -388,8 +388,12 @@ impl Error for InvalidMove {
     fn description(&self) -> &str {
         match *self {
             InvalidMove::NotEnoughUnits => "not enough unit on the source tile",
-            InvalidMove::ToInvalidTile => "the destination tile is either a wall or not on the map",
-            InvalidMove::FromInvalidTile => "the source tile is either a wall or not on the map",
+            InvalidMove::ToInvalidTile => {
+                "the destination tile is either a mountain or not on the map"
+            }
+            InvalidMove::FromInvalidTile => {
+                "the source tile is either a mountain or not on the map"
+            }
             InvalidMove::SourceTileNotOwned => {
                 "the source tile does not belong to the player making the move"
             }

@@ -84,14 +84,14 @@ impl Game {
     }
 
     /// Increment the number of units on tiles that are owned by players.
-    /// Regular tiles are reinforced once every 25 turns, but generals and fortresses are
+    /// Regular tiles are reinforced once every 25 turns, but generals and cityes are
     /// reinforced at every turn.
     pub fn reinforce(&mut self) {
         if self.turn % 50 == 0 {
             info!("reinforcing all the tiles");
             self.map.reinforce(true);
         } else if self.turn % 2 == 0 {
-            info!("reinforcing generals and fortresses");
+            info!("reinforcing generals and cityes");
             self.map.reinforce(false);
         }
     }
@@ -196,8 +196,8 @@ impl Update {
                             t.set_owner(None);
                         }
 
-                        if t.is_fortress() {
-                            t.make_wall();
+                        if t.is_city() {
+                            t.make_mountain();
                         }
                     }
                     (*i, t)

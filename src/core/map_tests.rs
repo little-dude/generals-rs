@@ -18,12 +18,12 @@ const EMPTY_3: usize = 11;
 /// Return a map with two players, that looks like:
 ///
 /// ```
-/// Wall      Empty        Empty        Wall
-/// Open1[1]  General[2]   Fortress[1]  Wall
-/// Wall      Open2[2]     Wall         Empty
+/// Mountain  Empty       Empty     Mountain
+/// Open1[1]  General[2]  City[1]   Mountain
+/// Mountain  Open2[2]    Mountain  Empty
 /// ```
 ///
-/// `Open1` and `Fortress1` belong to player 1.
+/// `Open1` and `City1` belong to player 1.
 /// `Gereral1` and `Open2` belong to player 2.
 fn get_map() -> Map {
     let grid = Grid::new(|_| RefCell::new(Tile::new()), 4, 3);
@@ -57,9 +57,9 @@ fn get_map() -> Map {
         tile.reveal_to(2);
         tile.set_clean();
 
-        // Fortress (P1, 8 units)
+        // City (P1, 8 units)
         let mut tile = grid.get(FORTRESS).borrow_mut();
-        tile.make_fortress();
+        tile.make_city();
         tile.set_owner(Some(1));
         tile.set_units(8);
         tile.reveal_to(1);
@@ -98,7 +98,7 @@ fn test_transfer_units() {
 }
 
 #[test]
-fn test_conquer_fortress() {
+fn test_conquer_city() {
     let mut map = get_map();
     map.perform_move(Move {
         player: PLAYER_2,

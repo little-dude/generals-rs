@@ -64,14 +64,14 @@ fn tile() {
 
     let mut tile = Tile::new();
     assert!(tile.owner().is_none());
-    assert!(tile.is_wall());
+    assert!(tile.is_mountain());
     assert!(!tile.is_open());
     assert!(!tile.is_general());
-    assert!(!tile.is_fortress());
+    assert!(!tile.is_city());
     assert_eq!(tile.units(), 0);
     assert!(!tile.is_dirty());
 
-    // set attributes to the tile and make sure they are not updated, since the tile is a wall
+    // set attributes to the tile and make sure they are not updated, since the tile is a mountain
     tile.set_owner(Some(1));
     assert!(tile.owner().is_none());
     assert!(!tile.is_dirty());
@@ -80,7 +80,7 @@ fn tile() {
     assert_eq!(tile.units(), 0);
     assert!(!tile.is_dirty());
 
-    // visibility can be updated on walls though
+    // visibility can be updated on mountains though
     tile.reveal_to(9);
     assert!(tile.is_visible_by(9));
     assert!(tile.is_dirty());
@@ -96,10 +96,10 @@ fn tile() {
     // the tile should not be dirty since no-one sees it
     assert!(!tile.is_dirty());
     assert!(tile.owner().is_none());
-    assert!(!tile.is_wall());
+    assert!(!tile.is_mountain());
     assert!(tile.is_open());
     assert!(!tile.is_general());
-    assert!(!tile.is_fortress());
+    assert!(!tile.is_city());
     assert_eq!(tile.units(), 0);
 
     tile.set_owner(Some(1));
@@ -140,7 +140,7 @@ fn tile_serialize() {
     let mut tile = Tile::new();
 
     let serialized = serde_json::to_string(&tile).unwrap();
-    assert_eq!(serialized, r#"{"kind":"wall"}"#);
+    assert_eq!(serialized, r#"{"kind":"mountain"}"#);
 
     tile.make_open();
     let serialized = serde_json::to_string(&tile).unwrap();
@@ -158,13 +158,13 @@ fn tile_serialize() {
     let serialized = serde_json::to_string(&tile).unwrap();
     assert_eq!(serialized, r#"{"owner":1,"units":42,"kind":"general"}"#);
 
-    tile.make_fortress();
+    tile.make_city();
     let serialized = serde_json::to_string(&tile).unwrap();
-    assert_eq!(serialized, r#"{"owner":1,"units":42,"kind":"fortress"}"#);
+    assert_eq!(serialized, r#"{"owner":1,"units":42,"kind":"city"}"#);
 
     tile.reveal_to(1);
     let serialized = serde_json::to_string(&tile).unwrap();
-    assert_eq!(serialized, r#"{"owner":1,"units":42,"kind":"fortress"}"#);
+    assert_eq!(serialized, r#"{"owner":1,"units":42,"kind":"city"}"#);
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn conquer_occupied_tile_2() {
     src.set_units(6);
 
     let mut dst = Tile::new();
-    dst.make_fortress();
+    dst.make_city();
     dst.set_owner(Some(2));
     dst.set_units(2);
 
@@ -242,14 +242,14 @@ fn conquer_occupied_tile_fail() {
 }
 
 #[test]
-fn conquer_unoccupied_fortress_fail() {
+fn conquer_unoccupied_city_fail() {
     let mut src = Tile::new();
     src.make_open();
     src.set_owner(Some(1));
     src.set_units(10);
 
     let mut dst = Tile::new();
-    dst.make_fortress();
+    dst.make_city();
     dst.set_owner(None);
     dst.set_units(9);
 
@@ -261,14 +261,14 @@ fn conquer_unoccupied_fortress_fail() {
 }
 
 #[test]
-fn conquer_fortress() {
+fn conquer_city() {
     let mut src = Tile::new();
     src.make_open();
     src.set_owner(Some(1));
     src.set_units(10);
 
     let mut dst = Tile::new();
-    dst.make_fortress();
+    dst.make_city();
     dst.set_owner(None);
     dst.set_units(7);
 
@@ -281,11 +281,11 @@ fn conquer_fortress() {
 
 #[test]
 fn invalid_moves() {
-    // source tile is a wall
+    // source tile is a mountain
     let mut src = Tile::new();
 
     let mut dst = Tile::new();
-    dst.make_fortress();
+    dst.make_city();
     dst.set_owner(None);
     dst.set_units(7);
 
@@ -307,9 +307,9 @@ fn invalid_moves() {
     let outcome = src.attack(&mut dst);
     assert_eq!(outcome, Err(InvalidMove::NotEnoughUnits));
 
-    // source tile is now valid but dest tile is a wall
+    // source tile is now valid but dest tile is a mountain
     src.set_units(9);
-    let mut dst_wall = Tile::new(); // we don't have a `make_wall()` method
-    let outcome = src.attack(&mut dst_wall);
+    let mut dst_mountain = Tile::new(); // we don't have a `make_mountain()` method
+    let outcome = src.attack(&mut dst_mountain);
     assert_eq!(outcome, Err(InvalidMove::ToInvalidTile));
 }

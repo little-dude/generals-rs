@@ -43,7 +43,7 @@ impl GridBuilder {
         }
     }
 
-    /// Return whether a given cell on the grid is open (ie is not a wall or a fortress).
+    /// Return whether a given cell on the grid is open (ie is not a mountain or a city).
     fn is_open(&self, index: usize) -> bool {
         let tile = self.grid.get(index).borrow();
         tile.is_open() || tile.is_general()

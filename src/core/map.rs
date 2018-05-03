@@ -88,7 +88,7 @@ impl Map {
             // the attacker, and make all the tiles visible by the defeated general visible by
             // the attacker.
             MoveOutcome::GeneralCaptured(defeated_player) => {
-                for mut t in self.iter_mut().filter(|t| !t.is_wall()) {
+                for mut t in self.iter_mut().filter(|t| !t.is_mountain()) {
                     if t.owner() == Some(defeated_player) {
                         t.set_owner(Some(mv.player));
                     }
@@ -140,7 +140,7 @@ impl Map {
         for mut tile in self.0
             .extended_neighbors(idx)
             .map(|i| self.get_mut(i))
-            .filter(|t| !t.is_wall())
+            .filter(|t| !t.is_mountain())
         {
             tile.reveal_to(player);
         }
@@ -152,7 +152,7 @@ impl Map {
         for (index, mut neighbor) in self.0
             .extended_neighbors(idx)
             .map(|i| (i, self.get_mut(i)))
-            .filter(|(_, t)| !t.is_wall() && t.is_visible_by(player))
+            .filter(|(_, t)| !t.is_mountain() && t.is_visible_by(player))
         {
             if !self.owns_extended_neighbor(player, index) {
                 neighbor.hide_from(player);
@@ -176,17 +176,17 @@ impl Map {
     }
 
     /// Increment the number of units of the tiles that are owned by players. If the
-    /// `reinforce_all_tiles` is `false`, then only the generals and fortresses are reinforced,
+    /// `reinforce_all_tiles` is `false`, then only the generals and cityes are reinforced,
     /// otherwise, all the tiles are reinforced.
     pub fn reinforce(&mut self, reinforce_all_tiles: bool) {
-        for mut tile in self.iter_mut().filter(|t| !t.is_wall()) {
+        for mut tile in self.iter_mut().filter(|t| !t.is_mountain()) {
             if
             // reinforce open tiles only when there's a global reinforcement round
             (tile.owner().is_some() && reinforce_all_tiles)
                     // reinfoce generals every round
                     || tile.is_general()
-                    // reinfoce fortress every round if they are occupied
-                    || (tile.is_fortress() && tile.owner().is_some())
+                    // reinfoce city every round if they are occupied
+                    || (tile.is_city() && tile.owner().is_some())
             {
                 tile.incr_units(1);
             }
