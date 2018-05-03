@@ -64,8 +64,23 @@ impl Map {
 
         let outcome = {
             let mut src = self.get_mut(mv.from);
-            let mut dst = self.get_mut(dst_idx);
-            src.attack(&mut dst)?
+            match src.owner() {
+                Some(player) => {
+                    if player != mv.player {
+                        warn!(
+                            "source tile is owned by {:?}, but move comes from {}.",
+                            player, mv.player
+                        );
+                        return Err(InvalidMove::SourceTileNotOwned);
+                    }
+                    let mut dst = self.get_mut(dst_idx);
+                    src.attack(&mut dst)?
+                }
+                None => {
+                    warn!("source tile is not owned by any player");
+                    return Err(InvalidMove::SourceTileNotOwned);
+                }
+            }
         };
 
         match outcome {

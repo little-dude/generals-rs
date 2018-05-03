@@ -80,14 +80,21 @@ fn tile() {
     assert_eq!(tile.units(), 0);
     assert!(!tile.is_dirty());
 
+    // visibility can be updated on walls though
     tile.reveal_to(9);
+    assert!(tile.is_visible_by(9));
+    assert!(tile.is_dirty());
+    tile.hide_from(9);
     assert!(!tile.is_visible_by(9));
+    assert!(tile.is_dirty());
+    tile.set_clean();
     assert!(!tile.is_dirty());
 
     // now turn the tile into a normal tile and redo the same, this time making sure attributes
     // are updated.
     tile.make_open();
-    check_dirty_and_clean(&mut tile);
+    // the tile should not be dirty since no-one sees it
+    assert!(!tile.is_dirty());
     assert!(tile.owner().is_none());
     assert!(!tile.is_wall());
     assert!(tile.is_open());
@@ -133,7 +140,7 @@ fn tile_serialize() {
     let mut tile = Tile::new();
 
     let serialized = serde_json::to_string(&tile).unwrap();
-    assert_eq!(serialized, r#"null"#);
+    assert_eq!(serialized, r#"{"kind":"wall"}"#);
 
     tile.make_open();
     let serialized = serde_json::to_string(&tile).unwrap();
@@ -290,7 +297,7 @@ fn invalid_moves() {
     src.set_units(10);
 
     let outcome = src.attack(&mut dst);
-    assert_eq!(outcome, Err(InvalidMove::UnclaimedSourceTile));
+    assert_eq!(outcome, Err(InvalidMove::SourceTileNotOwned));
 
     // source tile is open and has an owner but has not enough unit
     src.make_open();

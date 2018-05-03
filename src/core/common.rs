@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 pub type PlayerId = usize;
 
 /// Represent a player during a game.
@@ -39,6 +41,10 @@ impl Player {
     /// Return whether the player can move. A player can move if it owns at least one tile, and if
     /// it has not been defeated.
     pub fn can_move(&self) -> bool {
+        if self.defeated() {
+            error!("DEFEATED {:?}", self.defeated_at);
+        }
+        error!("OWNED TILES == {}", self.owned_tiles);
         !self.defeated() && self.owned_tiles > 0
     }
 }
@@ -103,12 +109,14 @@ pub enum TileKind {
     Fortress,
     /// A regular tile
     Normal,
+    /// A tile that contains a wall
+    Wall,
 }
 
 /// Represent an open tile. Open tiles are tiles that are not walls, ie tiles that players can
 /// conquer.
 #[derive(Clone, PartialEq, Debug, Serialize)]
-pub struct OpenTile {
+pub struct Tile {
     /// The ID of the player that currenlty owns the tile (a player own a tile if he/she has units
     /// occupying the tile).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -125,12 +133,11 @@ pub struct OpenTile {
     /// List of players that can see the tile. To be able to see an open tile, a player must own a
     /// tile that touches it.
     #[serde(skip)]
-    visible_by: Vec<PlayerId>,
+    visible_by: HashSet<PlayerId>,
 
-    /// Flag that indicates that this tile's state changed. It is set when the number of units on
-    /// the tile changes or when the owner changes.
+    /// Players that had visibility on this tile when it changed.
     #[serde(skip)]
-    dirty: bool,
+    dirty_for: HashSet<PlayerId>,
 }
 
 /// Small helper used by serde to avoid serializing the `kind` field if the tile if of type
@@ -145,57 +152,50 @@ fn has_no_unit(units: &u16) -> bool {
     *units == 0
 }
 
-impl OpenTile {
+impl Tile {
     /// Return a new open tile or the given type, with no owner, and no unit.
-    pub fn new(kind: TileKind) -> Self {
-        OpenTile {
+    pub fn new() -> Self {
+        Tile {
             owner: None,
             units: 0,
-            dirty: false,
-            visible_by: Vec::new(),
-            kind,
+            dirty_for: HashSet::new(),
+            visible_by: HashSet::new(),
+            kind: TileKind::Wall,
         }
     }
-}
 
-impl OpenTile {
     /// Return whether the tile is marked as visible by the given player.
-    fn is_visible_by(&self, player: PlayerId) -> bool {
-        for p in &self.visible_by {
-            if *p == player {
-                return true;
-            }
-        }
-        false
+    pub fn is_visible_by(&self, player: PlayerId) -> bool {
+        self.visible_by.contains(&player)
     }
 
     /// Mark the tile as invisible for the given player
-    fn hide_from(&mut self, player: PlayerId) {
-        for i in 0..self.visible_by.len() {
-            if self.visible_by[i] != player {
-                continue;
-            }
-            self.visible_by.remove(i);
-            self.dirty = true;
-            return;
+    pub fn hide_from(&mut self, player: PlayerId) {
+        let was_visible = self.visible_by.remove(&player);
+        if was_visible {
+            self.dirty_for.insert(player);
         }
     }
 
     /// Mark the tile as visible for the given player, updating the source and destination tiles
     /// state if necessary (number of units, owner, etc.).
-    fn reveal_to(&mut self, player: PlayerId) {
-        if !self.is_visible_by(player) {
-            self.visible_by.push(player);
-            self.dirty = true;
-        }
+    pub fn reveal_to(&mut self, player: PlayerId) {
+        self.visible_by.insert(player);
+        self.dirty_for.insert(player);
     }
 
     /// Perform a move from a source tile to a destination tile.
-    fn attack(&mut self, dst: &mut OpenTile) -> Result<MoveOutcome, InvalidMove> {
-        let attacker = self.owner.ok_or(InvalidMove::UnclaimedSourceTile)?;
-        if self.units < 2 {
+    pub fn attack(&mut self, dst: &mut Tile) -> Result<MoveOutcome, InvalidMove> {
+        if self.is_wall() {
+            return Err(InvalidMove::FromInvalidTile);
+        }
+        if dst.is_wall() {
+            return Err(InvalidMove::ToInvalidTile);
+        }
+        if self.units() < 2 {
             return Err(InvalidMove::NotEnoughUnits);
         }
+        let attacker = self.owner.ok_or(InvalidMove::SourceTileNotOwned)?;
 
         let outcome = match dst.owner {
             // The destination tile belongs to someone else
@@ -242,195 +242,123 @@ impl OpenTile {
         // In any case, we always only leave 1 unit in the source tile
         // TODO: would be nice to support splitting the source tile units before moving.
         self.units = 1;
-        self.dirty = true;
-        dst.dirty = true;
+        self.set_dirty();
+        dst.set_dirty();
         Ok(outcome)
-    }
-}
-
-/// Represent a tile.
-#[derive(Clone, PartialEq, Debug, Serialize)]
-// A wall is represented by `None`, and any tile that is not a wall is represented as
-// `Some(OpenTile)`
-pub struct Tile(Option<OpenTile>);
-
-impl Default for Tile {
-    fn default() -> Self {
-        Tile(None)
-    }
-}
-
-impl Tile {
-    /// Return a new tile. By default, new tiles are walls.
-    pub fn new() -> Self {
-        Default::default()
     }
 
     /// Return the owner of the tile, if any
     pub fn owner(&self) -> Option<PlayerId> {
-        self.0.as_ref().and_then(|t| t.owner)
+        self.owner
     }
 
-    #[cfg(test)]
     /// Return the number of units occupying the tile
     pub fn units(&self) -> u16 {
-        self.0.as_ref().map(|t| t.units).unwrap_or(0)
+        self.units
     }
 
     /// Return whether the tile is open. A tile is open if it's not a fortress, a general or a
     /// wall.
     pub fn is_open(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|tile| match tile.kind {
-                TileKind::Normal => true,
-                TileKind::Fortress | TileKind::General => false,
-            })
-            .unwrap_or(false)
+        self.kind == TileKind::Normal
     }
 
     /// Return whether the tile is a general.
     pub fn is_general(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|tile| match tile.kind {
-                TileKind::General => true,
-                TileKind::Fortress | TileKind::Normal => false,
-            })
-            .unwrap_or(false)
+        self.kind == TileKind::General
     }
 
     /// Return whether the tile is a fortress.
     pub fn is_fortress(&self) -> bool {
-        self.0
-            .as_ref()
-            .map(|tile| match tile.kind {
-                TileKind::Fortress => true,
-                TileKind::General | TileKind::Normal => false,
-            })
-            .unwrap_or(false)
+        self.kind == TileKind::Fortress
     }
 
     /// Return whether the tile is a wall
     pub fn is_wall(&self) -> bool {
-        self.0.is_none()
+        self.kind == TileKind::Wall
     }
 
-    /// Turn the tile into an open tile (ie a tile that is not a wall, a general or a fortress)
+    /// Turn the tile into an open tile
     pub fn make_open(&mut self) {
-        if self.0.is_none() {
-            self.0 = Some(OpenTile::new(TileKind::Normal));
-        } else {
-            self.0.as_mut().unwrap().kind = TileKind::Normal;
-        }
-        self.0.as_mut().unwrap().dirty = true;
+        self.kind = TileKind::Normal;
+        self.set_dirty();
     }
 
+    pub fn set_dirty(&mut self) {
+        for player_id in self.visible_by.iter() {
+            self.dirty_for.insert(*player_id);
+        }
+    }
     /// Turn the tile into a general
     pub fn make_general(&mut self) {
-        if self.0.is_none() {
-            self.0 = Some(OpenTile::new(TileKind::General));
-        } else {
-            self.0.as_mut().unwrap().kind = TileKind::General;
-        }
-        self.0.as_mut().unwrap().dirty = true;
+        self.kind = TileKind::General;
+        self.set_dirty();
     }
 
+    // FIXME: unused for now, but that's because we don't have fortress yet
     /// Turn the tile into a fortess.
     pub fn make_fortress(&mut self) {
-        if self.0.is_none() {
-            self.0 = Some(OpenTile::new(TileKind::Fortress));
-        } else {
-            self.0.as_mut().unwrap().kind = TileKind::Fortress;
-        }
-        self.0.as_mut().unwrap().dirty = true;
+        self.kind = TileKind::Fortress;
+        self.set_dirty();
     }
 
     /// Turn the tile into a wall.
     pub fn make_wall(&mut self) {
-        self.0 = None;
+        self.kind = TileKind::Wall;
+        self.set_dirty();
     }
 
     /// Set the number of units occupying the tile
     pub fn set_units(&mut self, units: u16) {
-        if let Some(ref mut tile) = self.0 {
-            tile.units = units;
-            tile.dirty = true;
+        if self.is_wall() {
+            return;
         }
+        self.units = units;
+        self.set_dirty();
     }
 
     /// Increment the number of units occupying the tile
     pub fn incr_units(&mut self, units: u16) {
-        if let Some(ref mut tile) = self.0 {
-            tile.units += units;
-            tile.dirty = true;
+        if self.is_wall() {
+            return;
         }
+        self.units += units;
+        self.set_dirty();
     }
 
     /// Set the owner of the tile. To remove the existing owner, set the owner to `None`.
     pub fn set_owner(&mut self, player: Option<PlayerId>) {
-        if let Some(ref mut tile) = self.0 {
-            tile.owner = player;
-            if let Some(player) = player {
-                tile.reveal_to(player);
-            }
-            tile.dirty = true;
+        if self.is_wall() {
+            return;
+        }
+        // Mark the tile as dirty for the players that have visibility on the tile
+        self.set_dirty();
+        // Mark the tile as dirty for the previous owner. As owner, it should have visibility on
+        // the tile, so should have been added `dirty_for` already, but let's be safe, it's pretty
+        // cheap.
+        if let Some(owner) = self.owner {
+            self.dirty_for.insert(owner);
+        }
+        self.owner = player;
+        if let Some(owner) = self.owner {
+            self.reveal_to(owner);
         }
     }
 
     /// Return whether the tile's state has changed. A tile state changes when its type, its owner,
     /// or the number of units occupying it changes.
     pub fn is_dirty(&self) -> bool {
-        if let Some(ref tile) = self.0 {
-            tile.dirty
-        } else {
-            false
-        }
+        !self.dirty_for.is_empty()
+    }
+
+    pub fn is_dirty_for(&self, player_id: &PlayerId) -> bool {
+        self.dirty_for.contains(player_id)
     }
 
     /// Mark the tile a clean. This should be called to acknoledge that the tile has been processed
     /// when after is was marked as dirty.
     pub fn set_clean(&mut self) {
-        if let Some(ref mut tile) = self.0 {
-            tile.dirty = false;
-        }
-    }
-
-    /// Check whether the tile is marked as visible by the given player.
-    pub fn is_visible_by(&self, player: PlayerId) -> bool {
-        if let Some(tile) = self.0.as_ref() {
-            tile.is_visible_by(player)
-        } else {
-            false
-        }
-    }
-
-    /// Mark the tile as invisible for the given player.
-    pub fn hide_from(&mut self, player: PlayerId) {
-        if let Some(tile) = self.0.as_mut() {
-            tile.hide_from(player);
-        }
-    }
-
-    /// Mark the tile as visible for the given player.
-    pub fn reveal_to(&mut self, player: PlayerId) {
-        if let Some(tile) = self.0.as_mut() {
-            tile.reveal_to(player);
-        }
-    }
-
-    /// Move units from this tile to the given tile, updating the number of units of both tile, and
-    /// the owners of the target tile if necessary.
-    pub fn attack(&mut self, tile: &mut Tile) -> Result<MoveOutcome, InvalidMove> {
-        if let Some(src) = self.0.as_mut() {
-            if let Some(dst) = tile.0.as_mut() {
-                src.attack(dst)
-            } else {
-                Err(InvalidMove::ToInvalidTile)
-            }
-        } else {
-            Err(InvalidMove::FromInvalidTile)
-        }
+        let _ = self.dirty_for.drain();
     }
 }
 
@@ -448,9 +376,9 @@ pub enum InvalidMove {
     /// The source tile is either a wall or out of the grid.
     FromInvalidTile,
 
-    /// The source tile does not belong to anyone. A move can only be performed by a player, so it
-    /// does not make sense to perform a move form a tile that does not belong to any player.
-    UnclaimedSourceTile,
+    /// The source tile does not belong to the player making the move. A move can only be performed
+    /// by a player.
+    SourceTileNotOwned,
 }
 
 use std::error::Error;
@@ -462,7 +390,9 @@ impl Error for InvalidMove {
             InvalidMove::NotEnoughUnits => "not enough unit on the source tile",
             InvalidMove::ToInvalidTile => "the destination tile is either a wall or not on the map",
             InvalidMove::FromInvalidTile => "the source tile is either a wall or not on the map",
-            InvalidMove::UnclaimedSourceTile => "the source tile does not belong to any player",
+            InvalidMove::SourceTileNotOwned => {
+                "the source tile does not belong to the player making the move"
+            }
         }
     }
 

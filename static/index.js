@@ -888,14 +888,6 @@ class CellUpdator {
   }
 
   updateCell(cell) {
-    if (this.data === null) {
-      cell.type = CellType.Mountain;
-      cell.units = null;
-      cell.owner = null;
-      cell.visible = null;
-      return;
-    }
-
     if (!(typeof this.data === "object")) {
       throw "Invalid tile update";
     }
