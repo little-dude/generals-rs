@@ -24,3 +24,5 @@ function main() {
   // are not destroyed, so everthing works correctly.
   new InputEventsHandler(connection, grid);
 }
+
+main()
