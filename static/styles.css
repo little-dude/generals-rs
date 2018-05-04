@@ -31,6 +31,9 @@ td[data-type="general"] {
    background-size: 25px 25px;
 }
 
+td[data-visible="true"] {
+    opacity: 0.4;
+}
 td[data-owner="0"] {
    background-color: blue;
 }
@@ -45,17 +48,4 @@ td[data-owner="4"] {
 }
 td[data-owner="5"] {
    background-color: yellow;
-}
-
-.selected {
-    border: 1px solid white;
-    opacity: 0.9;
-}
-
-.hidden {
-    opacity: 0.4;
-}
-
-.attackable {
-    opacity: 0.4;
 }
