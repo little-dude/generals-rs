@@ -1,3 +1,9 @@
+import QUnit from "qunit";
+
+import { CellType } from "../src/celltype";
+import { Grid } from "../src/grid";
+import { ValidationError } from "../src/cell";
+
 QUnit.module("Cell", {
   beforeEach: function(assert) {
     this.grid = new Grid(document.getElementById("grid"));
@@ -26,7 +32,7 @@ QUnit.test("html", function(assert) {
 
 QUnit.test("units", function(assert) {
   let cell = this.cell;
-  let td = this.td
+  let td = this.td;
   assert.equal(cell.units, null);
   assert.equal(td.innerText, "");
 
@@ -47,7 +53,8 @@ QUnit.test("units", function(assert) {
         cell.units = value;
       },
       ValidationError,
-      "Validation error thrown for " + value);
+      "Validation error thrown for " + value
+    );
   }
   assertInvalid(true);
   assertInvalid("");
@@ -58,7 +65,7 @@ QUnit.test("units", function(assert) {
 
 QUnit.test("type", function(assert) {
   let cell = this.cell;
-  let td = this.td
+  let td = this.td;
   assert.equal(cell.type, CellType.Open);
   assert.equal(td.dataset.type, undefined);
 
@@ -79,7 +86,8 @@ QUnit.test("type", function(assert) {
         cell.type = value;
       },
       ValidationError,
-      "Validation error thrown for " + value);
+      "Validation error thrown for " + value
+    );
   }
   assertInvalid("city");
   assertInvalid(0);
@@ -89,7 +97,7 @@ QUnit.test("type", function(assert) {
 
 QUnit.test("visible", function(assert) {
   let cell = this.cell;
-  let td = this.td
+  let td = this.td;
 
   assert.equal(cell.visible, false);
   assert.equal(td.dataset.visible, undefined);
@@ -112,7 +120,8 @@ QUnit.test("visible", function(assert) {
         cell.visible = value;
       },
       ValidationError,
-      "Validation error thrown for " + value);
+      "Validation error thrown for " + value
+    );
   }
 
   assertInvalid("true");
@@ -124,7 +133,7 @@ QUnit.test("visible", function(assert) {
 
 QUnit.test("owner", function(assert) {
   let cell = this.cell;
-  let td = this.td
+  let td = this.td;
 
   assert.equal(cell.owner, null);
   assert.equal(td.dataset.owner, undefined);
@@ -146,7 +155,8 @@ QUnit.test("owner", function(assert) {
         cell.owner = value;
       },
       ValidationError,
-      "Validation error thrown for " + value);
+      "Validation error thrown for " + value
+    );
   }
   assertInvalid("1");
   assertInvalid(-1);
@@ -157,7 +167,7 @@ QUnit.test("owner", function(assert) {
 
 QUnit.test("selected", function(assert) {
   let cell = this.cell;
-  let td = this.td
+  let td = this.td;
 
   assert.equal(cell.selected, false);
   assert.equal(td.dataset.selected, undefined);
@@ -180,7 +190,8 @@ QUnit.test("selected", function(assert) {
         cell.selected = value;
       },
       ValidationError,
-      "Validation error thrown for " + value);
+      "Validation error thrown for " + value
+    );
   }
 
   assertInvalid("true");

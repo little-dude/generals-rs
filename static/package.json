@@ -1,9 +1,8 @@
 {
     "name": "generals-rs",
     "scripts": {
-        "build": "rollup src/index.js --o bundle.js --f iife ",
-        "test": "echo TODO",
-        "doc": "jsdoc -t node_modules/docdash src/"
+        "build": "rollup --config --external qunit",
+        "doc": "jsdoc -t node_modules/docdash src/ -o doc/"
     },
     "devDependencies": {
         "docdash": "^0.4.0",

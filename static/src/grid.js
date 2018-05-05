@@ -361,4 +361,4 @@ class Grid {
   }
 }
 
-export { Grid };
+export { Grid, Coordinates };

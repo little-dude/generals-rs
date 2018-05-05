@@ -1,3 +1,6 @@
 target/
-static/out/
 node_modules/
+
+static/out/
+static/tests/bundles/
+bundle.js

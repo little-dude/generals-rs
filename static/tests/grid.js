@@ -1,3 +1,8 @@
+import QUnit from "qunit";
+
+import { Grid, Coordinates } from "../src/grid";
+import { Direction } from "../src/direction";
+
 QUnit.module("Grid", {
   beforeEach: function(assert) {
     this.grid = new Grid(document.getElementById("grid"));
@@ -59,7 +64,8 @@ QUnit.test("getCell", function(assert) {
         grid.getCell(value);
       },
       RangeError,
-      "RangeError thrown for " + value);
+      "RangeError thrown for " + value
+    );
   }
   assertInvalid(-1);
   assertInvalid(13);
@@ -88,9 +94,9 @@ QUnit.test("getCellSafe", function(assert) {
 QUnit.test("select", function(assert) {
   let grid = this.grid;
   assert.equal(grid.selected, null);
-  grid.select(3)
+  grid.select(3);
   assert.equal(grid.selected, 3);
-  grid.select(9)
+  grid.select(9);
   assert.equal(grid.selected, 9);
 });
 

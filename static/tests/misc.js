@@ -1,4 +1,7 @@
-// CellType
+import QUnit from "qunit";
+
+import { CellType } from "../src/celltype";
+import { Direction } from "../src/direction";
 
 QUnit.module("CellType", {});
 
@@ -16,9 +19,6 @@ QUnit.test("toString", function(assert) {
   assert.equal(CellType.toString(CellType.General), "general");
 });
 
-
-// Direction
-
 QUnit.module("Direction", {});
 
 QUnit.test("fromString", function(assert) {
@@ -34,4 +34,3 @@ QUnit.test("toString", function(assert) {
   assert.equal(Direction.toString(Direction.Right), "right");
   assert.equal(Direction.toString(Direction.Down), "down");
 });
-

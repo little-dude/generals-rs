@@ -343,4 +343,4 @@ class Cell {
   }
 }
 
-export { Cell };
+export { Cell, ValidationError };
