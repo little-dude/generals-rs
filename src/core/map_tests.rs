@@ -86,7 +86,8 @@ fn test_transfer_units() {
         player: PLAYER_2,
         from: GENERAL,
         direction: Direction::Down,
-    }).unwrap();
+    })
+    .unwrap();
     let src = map.get(GENERAL);
     let dst = map.get(OPEN_2);
     assert_eq!(src.units(), 1);
@@ -104,7 +105,8 @@ fn test_conquer_city() {
         player: PLAYER_2,
         from: GENERAL,
         direction: Direction::Right,
-    }).unwrap();
+    })
+    .unwrap();
     let src = map.get(GENERAL);
     let dst = map.get(FORTRESS);
     assert_eq!(src.owner(), Some(2));
@@ -126,7 +128,8 @@ fn test_conquer_general() {
         player: PLAYER_1,
         from: OPEN_1,
         direction: Direction::Right,
-    }).unwrap();
+    })
+    .unwrap();
     let src = map.get(OPEN_1);
     let dst = map.get(GENERAL);
     assert_eq!(src.owner(), Some(1));

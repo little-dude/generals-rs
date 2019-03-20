@@ -60,7 +60,8 @@ impl Map {
             Direction::Left => self.0.left(mv.from),
             Direction::Up => self.0.up(mv.from),
             Direction::Down => self.0.down(mv.from),
-        }.ok_or(InvalidMove::ToInvalidTile)?;
+        }
+        .ok_or(InvalidMove::ToInvalidTile)?;
 
         let outcome = {
             let mut src = self.get_mut(mv.from);
@@ -115,7 +116,7 @@ impl Map {
 
     /// Return an iterator over all the tiles. The tiles are mutable.
     fn iter_mut(&mut self) -> impl Iterator<Item = RefMut<Tile>> {
-        self.0.iter().map(|t| t.borrow_mut())
+        self.0.iter().map(RefCell::borrow_mut)
     }
 
     /// Return an iterator over all the tiles with their indices. The tiles are mutable.
@@ -137,7 +138,8 @@ impl Map {
     /// Make sure the given player can see all the tiles surrounding the given index. This should be
     /// called after the player just conquered the tile.
     pub fn enlarge_horizon(&self, player: PlayerId, idx: usize) {
-        for mut tile in self.0
+        for mut tile in self
+            .0
             .extended_neighbors(idx)
             .map(|i| self.get_mut(i))
             .filter(|t| !t.is_mountain())
@@ -149,7 +151,8 @@ impl Map {
     /// Reduce the visibility of the tiles that surround the tile at the given index, for the given
     /// player. This should be called after the player just lost the tile.
     fn shrink_horizon(&self, player: PlayerId, idx: usize) {
-        for (index, mut neighbor) in self.0
+        for (index, mut neighbor) in self
+            .0
             .extended_neighbors(idx)
             .map(|i| (i, self.get_mut(i)))
             .filter(|(_, t)| !t.is_mountain() && t.is_visible_by(player))
@@ -164,7 +167,8 @@ impl Map {
     /// This is used to know whether that player can view the given tile or if it's in the fog or
     /// war.
     fn owns_extended_neighbor(&self, player: PlayerId, idx: usize) -> bool {
-        for tile in self.0
+        for tile in self
+            .0
             .extended_neighbors(idx)
             .map(|i| self.0.get(i).borrow())
         {
@@ -183,13 +187,15 @@ impl Map {
             if
             // reinforce open tiles only when there's a global reinforcement round
             (tile.owner().is_some() && reinforce_all_tiles)
-                    // reinfoce generals every round
+                    // reinforce generals every round
                     || tile.is_general()
                     // reinfoce city every round if they are occupied
                     || (tile.is_city() && tile.owner().is_some())
             {
+                trace!("reinforcing tile {:?}", tile);
                 tile.incr_units(1);
             }
+            trace!("not reinforcing tile {:?}", tile);
         }
     }
 }

@@ -84,7 +84,8 @@ where
     /// Send the pending updates to the client
     fn process_updates(&mut self) -> Poll<(), ConnectionError> {
         loop {
-            match self.updates
+            match self
+                .updates
                 .poll()
                 .map_err(|()| ConnectionError::Internal("Failed to poll update channel".into()))?
             {

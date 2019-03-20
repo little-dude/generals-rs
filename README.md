@@ -33,6 +33,15 @@ it:
 Running
 =======
 
+First, build the fronted with `yarn`:
+
+```
+# install all the dependencies
+yarn install
+# build the bundle.js file
+yarn build
+```
+
 To run the server, you'll need `rust` and it's package manager `cargo`. See the
 official documentation for installation instructions. Then, it's as simple as:
 

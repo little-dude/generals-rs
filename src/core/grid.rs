@@ -14,7 +14,7 @@ impl<T> Grid<T> {
     {
         let nb_tiles = width * height;
         Grid {
-            tiles: (0..nb_tiles).into_iter().map(factory).collect(),
+            tiles: (0..nb_tiles).map(factory).collect(),
             width,
             height,
         }

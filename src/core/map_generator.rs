@@ -7,8 +7,7 @@
 use std::cell::RefCell;
 
 use fera_unionfind::UnionFindRange;
-use rand::seq::sample_indices;
-use rand::{thread_rng, ThreadRng};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use super::common::Tile;
 use super::grid::Grid;
@@ -31,9 +30,8 @@ impl GridBuilder {
     /// generals: more generals mean bigger grid.
     pub fn new(nb_generals: usize) -> Self {
         let mut rng = thread_rng();
-        let dimensions = sample_indices(&mut rng, GRID_SIZE_MAX_DELTA + 1, 2);
-        let width = MIN_GRID_SIZE + nb_generals + dimensions[0];
-        let height = MIN_GRID_SIZE + nb_generals + dimensions[1];
+        let width = MIN_GRID_SIZE + nb_generals + rng.gen_range(0, GRID_SIZE_MAX_DELTA + 1);
+        let height = MIN_GRID_SIZE + nb_generals + rng.gen_range(0, GRID_SIZE_MAX_DELTA + 1);
 
         GridBuilder {
             generals: Vec::new(),
@@ -55,7 +53,17 @@ impl GridBuilder {
         let nb_tiles = self.grid.len();
         let mut uf = UnionFindRange::with_keys_in_range(..nb_tiles);
 
-        'outer: for index in sample_indices(&mut self.rng, nb_tiles, nb_tiles) {
+        debug!("generating grid");
+        'outer: loop {
+            // Pick a random tile
+            let index = self.rng.gen_range(0, nb_tiles);
+            // If that tile is already open, ignore it and pick another one
+            {
+                let tile = self.grid.get(index).borrow();
+                if tile.is_open() || tile.is_general() {
+                    continue;
+                }
+            }
             // Open the tile, and connect it to its neighbors that are already open
             self.grid.get(index).borrow_mut().make_open();
             for i in self.grid.direct_neighbors(index) {
@@ -72,6 +80,7 @@ impl GridBuilder {
                         continue 'outer;
                     }
                 }
+                info!("making {} a general", index);
                 self.grid.get(index).borrow_mut().make_general();
                 self.generals.push(index);
                 continue;
@@ -87,8 +96,13 @@ impl GridBuilder {
                     continue 'outer;
                 }
             }
+
+            debug!("successfully generated a grid");
+            // For debugging print the generated grid
+            for (idx, tile) in self.grid.tiles().iter().enumerate() {
+                debug!("index {}: {:?}", idx, tile);
+            }
             return (self.generals, self.grid);
         }
-        panic!("Failed to generate map");
     }
 }

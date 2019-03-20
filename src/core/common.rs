@@ -41,10 +41,6 @@ impl Player {
     /// Return whether the player can move. A player can move if it owns at least one tile, and if
     /// it has not been defeated.
     pub fn can_move(&self) -> bool {
-        if self.defeated() {
-            error!("DEFEATED {:?}", self.defeated_at);
-        }
-        error!("OWNED TILES == {}", self.owned_tiles);
         !self.defeated() && self.owned_tiles > 0
     }
 }
@@ -295,12 +291,12 @@ impl Tile {
         self.set_dirty();
     }
 
-    // FIXME: unused for now, but that's because we don't have city yet
-    /// Turn the tile into a fortess.
-    pub fn make_city(&mut self) {
-        self.kind = TileKind::City;
-        self.set_dirty();
-    }
+    // // FIXME: unused for now, but that's because we don't have city yet
+    // /// Turn the tile into a fortess.
+    // pub fn make_city(&mut self) {
+    //     self.kind = TileKind::City;
+    //     self.set_dirty();
+    // }
 
     /// Turn the tile into a mountain.
     pub fn make_mountain(&mut self) {
@@ -351,8 +347,8 @@ impl Tile {
         !self.dirty_for.is_empty()
     }
 
-    pub fn is_dirty_for(&self, player_id: &PlayerId) -> bool {
-        self.dirty_for.contains(player_id)
+    pub fn is_dirty_for(&self, player_id: PlayerId) -> bool {
+        self.dirty_for.contains(&player_id)
     }
 
     /// Mark the tile a clean. This should be called to acknoledge that the tile has been processed

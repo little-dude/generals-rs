@@ -20,7 +20,7 @@ impl Game {
         assert_eq!(generals.len(), players.len());
 
         for (general, player) in generals.into_iter().zip(players.iter().cloned()) {
-            info!("spawning player {} on {}", general, player);
+            info!("spawning player {} on {}", player, general);
             let mut tile = map.get_mut(general);
             tile.set_owner(Some(player));
             map.enlarge_horizon(player, general);
@@ -91,7 +91,7 @@ impl Game {
             info!("reinforcing all the tiles");
             self.map.reinforce(true);
         } else if self.turn % 2 == 0 {
-            info!("reinforcing generals and cityes");
+            info!("reinforcing generals and cities");
             self.map.reinforce(false);
         }
     }
@@ -115,6 +115,7 @@ impl Game {
         }
 
         // Get all the dirty tiles
+        let is_first_turn = self.is_first_turn();
         let updated_tiles = {
             let Game {
                 ref mut players,
@@ -131,7 +132,7 @@ impl Game {
                         panic!("Tile {:?} owned by an unknown player {}", tile, owner);
                     }
                 }
-                if self.is_first_turn() || tile.is_dirty() {
+                if is_first_turn || tile.is_dirty() {
                     updated_tiles.push((i, tile.clone()));
                     tile.set_clean();
                 }
@@ -184,9 +185,10 @@ impl Update {
             height: self.height,
             players: self.players.clone(),
             is_initial_update: self.is_initial_update,
-            tiles: self.tiles
+            tiles: self
+                .tiles
                 .iter()
-                .filter(|(_, t)| t.is_dirty_for(&player) || self.is_initial_update)
+                .filter(|(_, t)| t.is_dirty_for(player) || self.is_initial_update)
                 .map(|(i, t)| {
                     let mut t = t.clone();
                     if !t.is_visible_by(player) {

@@ -38,15 +38,14 @@ impl Server {
             let connection_tx = connection_tx.clone();
             let handle = handle.clone();
 
-            let addr_clone = addr.clone();
             accept_async(stream)
                 .and_then(move |ws| {
-                    debug!("{}: websocket open", addr_clone);
+                    debug!("{}: websocket open", addr);
                     let (connection, connection_proxy) = Connection::new(ws);
                     handle.spawn(connection.map_err(move |e| {
                         error!(
                             "{}: connection future terminated with an error: {:?}",
-                            addr_clone, e
+                            addr, e
                         )
                     }));
                     SendFuture::new(connection_tx)

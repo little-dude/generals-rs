@@ -1,10 +1,7 @@
-#![feature(plugin)]
-#![plugin(rocket_codegen)]
-
+extern crate actix_web;
 extern crate fera_unionfind;
 extern crate futures;
 extern crate rand;
-extern crate rocket;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -24,23 +21,11 @@ mod game;
 mod server;
 
 use std::env;
-use std::io;
-use std::path::{Path, PathBuf};
 use std::thread;
-
-use rocket::response::NamedFile;
 
 use server::Server;
 
-#[get("/")]
-fn index() -> io::Result<NamedFile> {
-    NamedFile::open("static/index.html")
-}
-
-#[get("/<file..>")]
-fn files(file: PathBuf) -> Option<NamedFile> {
-    NamedFile::open(Path::new("static/").join(file)).ok()
-}
+use actix_web::{fs::StaticFiles, middleware, server as actix_server, App};
 
 fn main() {
     env_logger::init();
@@ -50,5 +35,19 @@ fn main() {
         .parse()
         .unwrap();
     thread::spawn(move || Server::run(&addr));
-    rocket::ignite().mount("/", routes![index, files]).launch();
+    actix_server::new(|| {
+        App::new()
+            .middleware(middleware::Logger::default())
+            .handler(
+                "/",
+                StaticFiles::new("./static")
+                    .unwrap()
+                    .index_file("index.html"),
+            )
+            .handler("/static", StaticFiles::new("./static").unwrap())
+            .finish()
+    })
+    .bind("127.0.0.1:8000")
+    .expect("Can not bind to port 8000")
+    .run();
 }

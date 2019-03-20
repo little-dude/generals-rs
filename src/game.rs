@@ -20,7 +20,8 @@ impl ActiveGame {
     fn process_players_actions(&mut self) {
         trace!("processing players actions");
 
-        for (player, mut connection) in self.connections
+        for (player, mut connection) in self
+            .connections
             .iter_mut()
             // Do not take any more action from players that have resigned
             .filter(|(_, c)| !c.has_resigned())
